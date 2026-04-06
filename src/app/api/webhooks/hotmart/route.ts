@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     const evento = payload?.event as string;
 
     console.log("Webhook Hotmart evento:", evento, "payload keys:", Object.keys(payload?.data ?? {}));
+    console.log("Webhook Hotmart commissions:", JSON.stringify(payload?.data?.commissions));
 
     // Siempre responder 200 a Hotmart para evitar reintentos innecesarios
     if (!EVENTOS_PROCESADOS.has(evento)) {
