@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
 
       const { montoUSD, tasaCambio } = await convertirAUSD(montoOriginal, moneda, fechaTransaccion);
 
+      const compradorEmail = (pi.receipt_email ?? undefined)?.toLowerCase() || undefined;
+      const compradorNombre = (pi.shipping?.name ?? undefined) || undefined;
+
       await upsertTransaccion({
         plataforma: "stripe",
         plataformaTxId: pi.id,
@@ -60,6 +63,8 @@ export async function POST(request: NextRequest) {
         estado: "completado",
         fechaTransaccion,
         fuente: "webhook",
+        compradorEmail,
+        compradorNombre,
         payloadRaw: JSON.stringify(event),
       });
     } else if (event.type === "charge.refunded") {

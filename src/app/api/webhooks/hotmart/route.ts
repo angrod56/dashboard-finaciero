@@ -67,6 +67,10 @@ export async function POST(request: NextRequest) {
       fechaTransaccion
     );
 
+    const comprador = payload?.data?.buyer;
+    const compradorEmail = (comprador?.email as string | undefined)?.toLowerCase() || undefined;
+    const compradorNombre = (comprador?.name as string | undefined) || undefined;
+
     await upsertTransaccion({
       plataforma: "hotmart",
       plataformaTxId: txId,
@@ -79,6 +83,8 @@ export async function POST(request: NextRequest) {
       estado,
       fechaTransaccion,
       fuente: "webhook",
+      compradorEmail,
+      compradorNombre,
       payloadRaw: JSON.stringify(payload),
     });
 
