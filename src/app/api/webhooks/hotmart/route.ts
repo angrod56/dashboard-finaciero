@@ -20,9 +20,12 @@ function inferirCategoria(nombre: string): Categoria {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar token de seguridad
-    const hottok = request.headers.get("hottok");
+    // Hotmart envía hottok como header O como query param
+    const { searchParams } = new URL(request.url);
+    const hottok = request.headers.get("hottok") ?? searchParams.get("hottok");
     const tokenEsperado = process.env.HOTMART_WEBHOOK_TOKEN;
+
+    console.log("Webhook Hotmart recibido — hottok:", hottok, "esperado:", tokenEsperado);
 
     if (tokenEsperado && tokenEsperado !== "tu_token_de_hotmart_aqui" && hottok !== tokenEsperado) {
       console.warn("Webhook Hotmart: token inválido");
@@ -32,8 +35,11 @@ export async function POST(request: NextRequest) {
     const payload = await request.json();
     const evento = payload?.event as string;
 
+    console.log("Webhook Hotmart evento:", evento, "payload keys:", Object.keys(payload?.data ?? {}));
+
     // Siempre responder 200 a Hotmart para evitar reintentos innecesarios
     if (!EVENTOS_PROCESADOS.has(evento)) {
+      console.log("Webhook Hotmart: evento no procesado:", evento);
       return NextResponse.json({ recibido: true, procesado: false });
     }
 
