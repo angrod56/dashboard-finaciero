@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     console.log("Webhook Hotmart evento:", evento, "payload keys:", Object.keys(payload?.data ?? {}));
     console.log("Webhook Hotmart commissions:", JSON.stringify(payload?.data?.commissions));
+    console.log("Webhook Hotmart purchase.price:", JSON.stringify(payload?.data?.purchase?.price));
 
     // Siempre responder 200 a Hotmart para evitar reintentos innecesarios
     if (!EVENTOS_PROCESADOS.has(evento)) {
@@ -54,8 +55,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ recibido: true, procesado: false });
     }
 
-    const montoOriginal = parseFloat(compra.price?.value ?? 0);
-    const moneda = (compra.price?.currency_value ?? "USD").toUpperCase();
+    // Buscar la comisión correcta según el rol configurado
+    // HOTMART_COMMISSION_SOURCE puede ser: PRODUCER, COPRODUCER, AFFILIATE
+    // Si no está configurado, busca cualquier entrada que no sea MARKETPLACE
+    const commissions = payload?.data?.commissions as Array<{ source: string; value: number; currency_value: string }> | undefined;
+    const miSource = process.env.HOTMART_COMMISSION_SOURCE ?? "PRODUCER";
+    const miComision = commissions?.find((c) => c.source === miSource)
+      ?? commissions?.find((c) => c.source !== "MARKETPLACE");
+
+    const montoOriginal = miComision ? miComision.value : parseFloat(compra.price?.value ?? 0);
+    const moneda = (miComision ? miComision.currency_value : (compra.price?.currency_value ?? "USD")).toUpperCase();
+    console.log("Webhook Hotmart monto seleccionado:", montoOriginal, moneda, "source:", miComision?.source ?? "precio_total");
     const nombreProducto = payload?.data?.product?.name ?? "Producto Hotmart";
     const fechaTransaccion = compra.approved_date
       ? new Date(compra.approved_date)
