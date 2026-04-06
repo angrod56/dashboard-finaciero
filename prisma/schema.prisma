@@ -1,13 +1,69 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+}
+
+model Transaccion {
+  id              String   @id @default(cuid())
+
+  // Clave de deduplicación — constraint UNIQUE a nivel DB
+  plataforma      String   // "hotmart" | "stripe" | "bancolombia"
+  plataformaTxId  String   // ID de la transacción en la plataforma origen
+
+  // Montos
+  montoUSD        Float    // Siempre en USD para agregación unificada
+  montoOriginal   Float    // Monto exacto de la plataforma
+  moneda          String   // "USD" | "COP"
+  tasaCambio      Float    @default(1.0)
+
+  // Clasificación
+  categoria       String   // "producto_digital" | "mentoria" | "servicio" | "membresia"
+  nombreProducto  String
+  estado          String   // "completado" | "reembolsado" | "contracargo"
+
+  // Fechas
+  fechaTransaccion DateTime
+  creadoEn        DateTime  @default(now())
+  actualizadoEn   DateTime  @updatedAt
+
+  // Comprador
+  compradorEmail  String?  // Para LTV y recompra
+  compradorNombre String?
+
+  // Trazabilidad
+  fuente          String   // "webhook" | "importacion"
+  importBatchId   String?
+  importBatch     ImportBatch? @relation(fields: [importBatchId], references: [id])
+  payloadRaw      String?  // JSON original para auditoría
+
+  @@unique([plataforma, plataformaTxId])
+  @@index([fechaTransaccion])
+  @@index([plataforma])
+  @@index([categoria])
+  @@index([compradorEmail])
+}
+
+model ImportBatch {
+  id              String         @id @default(cuid())
+  plataforma      String
+  nombreArchivo   String
+  totalFilas      Int
+  filasInsertadas Int
+  filasOmitidas   Int
+  filasError      Int
+  creadoEn        DateTime       @default(now())
+  transacciones   Transaccion[]
+}
+
+model TasaCambio {
+  id           String   @id @default(cuid())
+  desdeDivisa  String
+  hastaDivisa  String
+  tasa         Float
+  fecha        DateTime
+
+  @@unique([desdeDivisa, hastaDivisa, fecha])
 }
